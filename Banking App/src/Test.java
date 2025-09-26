@@ -1,0 +1,181 @@
+import java.sql.*;
+import java.util.Scanner;
+
+public class Test {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        String url = "jdbc:mysql://localhost:3306/sample";
+        String uname = "root";
+        String dbPassword = "1234";
+
+        try (Connection con = DriverManager.getConnection(url, uname, dbPassword)) {
+            System.out.println("Are you a new user?");
+            System.out.println("1. Yes");
+            System.out.println("2. No");
+            System.out.print("Enter 1 or 2: ");
+            int choice = sc.nextInt();
+            sc.nextLine();
+
+            if (choice == 1) {
+                // Registration
+                System.out.print("Enter your name: ");
+                String name = sc.nextLine();
+                System.out.print("Enter your password: ");
+                String password = sc.nextLine();
+                System.out.print("Enter your address: ");
+                String address = sc.nextLine();
+                System.out.print("Enter your email: ");
+                String email = sc.nextLine();
+                System.out.print("Enter your phone: ");
+                String phone = sc.nextLine();
+                System.out.print("Enter your initial balance: ");
+                int balance = sc.nextInt();
+
+                String insertQuery = "INSERT INTO bank2 (name, password, address, email, phone, balance) VALUES (?, ?, ?, ?, ?, ?)";
+                PreparedStatement pst = con.prepareStatement(insertQuery);
+                pst.setString(1, name);
+                pst.setString(2, password);
+                pst.setString(3, address);
+                pst.setString(4, email);
+                pst.setString(5, phone);
+                pst.setInt(6, balance);
+                pst.executeUpdate();
+                System.out.println("Registration successful!");
+            } else if (choice == 2) {
+                // Login
+                sc.nextLine();
+                System.out.print("Enter your username: ");
+                String name = sc.nextLine();
+                System.out.print("Enter your password: ");
+                String password = sc.nextLine();
+
+                String loginQuery = "SELECT * FROM bank2 WHERE name = ? AND password = ?";
+                PreparedStatement loginPst = con.prepareStatement(loginQuery);
+                loginPst.setString(1, name);
+                loginPst.setString(2, password);
+                ResultSet rs = loginPst.executeQuery();
+
+                if (rs.next()) {
+                    int userId = rs.getInt("id");
+                    System.out.println("Login successful. Welcome, " + name + "!");
+
+                    while (true) {
+                        System.out.println("\nChoose an option:");
+                        System.out.println("1. Deposit");
+                        System.out.println("2. Withdraw");
+                        System.out.println("3. Check Balance");
+                        System.out.println("4. Edit Profile");
+                        System.out.println("5. Change Password");
+                        System.out.println("6. Exit");
+                        int option = sc.nextInt();
+                        sc.nextLine();
+
+                        switch (option) {
+                            case 1:
+                                // Deposit
+                                System.out.print("Enter amount to deposit: ");
+                                int deposit = sc.nextInt();
+                                String depositQuery = "UPDATE bank2 SET balance = balance + ? WHERE id = ?";
+                                PreparedStatement dpst = con.prepareStatement(depositQuery);
+                                dpst.setInt(1, deposit);
+                                dpst.setInt(2, userId);
+                                dpst.executeUpdate();
+                                System.out.println("Deposit successful.");
+                                break;
+
+                            case 2:
+                                // Withdraw
+                                System.out.print("Enter amount to withdraw: ");
+                                int withdraw = sc.nextInt();
+                                String balanceCheckQuery = "SELECT balance FROM bank2 WHERE id = ?";
+                                PreparedStatement bcPst = con.prepareStatement(balanceCheckQuery);
+                                bcPst.setInt(1, userId);
+                                ResultSet bcRs = bcPst.executeQuery();
+                                if (bcRs.next()) {
+                                    int currentBalance = bcRs.getInt("balance");
+                                    if (currentBalance >= withdraw) {
+                                        String withdrawQuery = "UPDATE bank2 SET balance = balance - ? WHERE id = ?";
+                                        PreparedStatement wpst = con.prepareStatement(withdrawQuery);
+                                        wpst.setInt(1, withdraw);
+                                        wpst.setInt(2, userId);
+                                        wpst.executeUpdate();
+                                        System.out.println("Withdrawal successful.");
+                                    } else {
+                                        System.out.println("Insufficient balance.");
+                                    }
+                                }
+                                break;
+
+                            case 3:
+                                // Check Balance
+                                String balanceQuery = "SELECT balance FROM bank2 WHERE id = ?";
+                                PreparedStatement bpst = con.prepareStatement(balanceQuery);
+                                bpst.setInt(1, userId);
+                                ResultSet balanceRs = bpst.executeQuery();
+                                if (balanceRs.next()) {
+                                    System.out.println("Your balance is: " + balanceRs.getInt("balance"));
+                                }
+                                break;
+
+                            case 4:
+                                // Edit Profile
+                                System.out.println("What do you want to edit?");
+                                System.out.println("1. Name");
+                                System.out.println("2. Password");
+                                System.out.println("3. Address");
+                                System.out.println("4. Email");
+                                System.out.println("5. Phone");
+                                int editChoice = sc.nextInt();
+                                sc.nextLine();
+                                String field = "", newValue = "";
+                                switch (editChoice) {
+                                    case 1: field = "name"; break;
+                                    case 2: field = "password"; break;
+                                    case 3: field = "address"; break;
+                                    case 4: field = "email"; break;
+                                    case 5: field = "phone"; break;
+                                    default: System.out.println("Invalid choice."); continue;
+                                }
+                                System.out.print("Enter new " + field + ": ");
+                                newValue = sc.nextLine();
+                                String updateQuery = "UPDATE bank2 SET " + field + " = ? WHERE id = ?";
+                                PreparedStatement epst = con.prepareStatement(updateQuery);
+                                epst.setString(1, newValue);
+                                epst.setInt(2, userId);
+                                epst.executeUpdate();
+                                System.out.println(field + " updated successfully.");
+                                break;
+
+                            case 5:
+                                // Change Password
+                                System.out.print("Enter new password: ");
+                                String newPassword = sc.nextLine();
+                                String passQuery = "UPDATE bank2 SET password = ? WHERE id = ?";
+                                PreparedStatement ppst = con.prepareStatement(passQuery);
+                                ppst.setString(1, newPassword);
+                                ppst.setInt(2, userId);
+                                ppst.executeUpdate();
+                                System.out.println("Password changed successfully.");
+                                break;
+
+                            case 6:
+                                // Exit
+                                System.out.println("Goodbye!");
+                                return;
+
+                            default:
+                                System.out.println("Invalid option.");
+                        }
+                    }
+                } else {
+                    System.out.println("Invalid username or password.");
+                }
+            } else {
+                System.out.println("Invalid input");
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}
